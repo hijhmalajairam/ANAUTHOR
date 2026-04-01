@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Grid - AnyAuthor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* THE TRUE GLASSMORPHISM AESTHETIC */
+        body {
+            /* Deep, dark radial gradient background to give the glass something to blur */
+            background: radial-gradient(circle at center, #111827 0%, #000000 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding-bottom: 5rem;
+            min-height: 100vh;
+        }
+
+        /* The Animated Entry */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in-element {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Floating Glass Navbar */
+        .navbar-custom {
+            background: rgba(5, 5, 5, 0.7) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-logo {
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(to right, #ffffff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Advanced Glass Cards */
+        .glass-card {
+            background: rgba(20, 20, 20, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.15); /* Frosted top edge */
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(168, 85, 247, 0.3);
+            box-shadow: 0 10px 40px rgba(168, 85, 247, 0.1);
+        }
+
+        /* Seamless Input Fields */
+        .custom-input {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .custom-input:focus {
+            background: rgba(255, 255, 255, 0.06) !important;
+            border-color: #a855f7 !important;
+            box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15) !important;
+        }
+        .custom-input::placeholder { color: #6b7280 !important; }
+
+        /* The "Write a Post" Box (Completely Borderless) */
+        .seamless-textarea {
+            background: transparent !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-size: 1.2rem;
+            resize: none;
+            box-shadow: none !important;
+        }
+        .seamless-textarea::placeholder { color: #4b5563 !important; font-weight: 300; }
+
+        /* Buttons */
+        .btn-glow {
+            background: #ffffff; color: #000000; font-weight: 700; border: none; border-radius: 10px; padding: 10px 20px; transition: all 0.2s;
+        }
+        .btn-glow:hover { background: #f3e8ff; box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); transform: translateY(-1px); }
+        
+        .btn-ghost {
+            background: rgba(255,255,255,0.03); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; transition: all 0.2s;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: #a855f7; color: #ffffff; }
+
+        /* User Avatar */
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        /* Typography */
+        .text-muted-custom { color: #9ca3af !important; }
+        .accent-purple { color: #a855f7 !important; }
+        
+        /* Navigation Pills */
+        .nav-pills .nav-link { color: #9ca3af; border-radius: 10px; margin: 0 5px; font-weight: 500; transition: all 0.2s; }
+        .nav-pills .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
+        .nav-pills .nav-link.active { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-5 py-3">
+    <div class="container">
+        <a class="navbar-brand brand-logo fs-3 me-4" href="/feed">AnyAuthor.</a>
+        
+        <form action="/search" method="GET" class="d-flex flex-grow-1 me-4">
+            <input class="form-control form-control-sm me-2 custom-input" type="search" name="q" placeholder="Search the grid..." required>
+            <button class="btn btn-ghost btn-sm px-3" type="submit">Scan</button>
+        </form>
+
+        <div class="d-flex align-items-center">
+            {% if session.get('user_id') %}
+                <a href="/profile/{{ session.get('username') }}" class="text-light text-decoration-none me-4 d-flex align-items-center">
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('username') }}&background=random&color=fff&bold=true" class="user-avatar me-2 shadow-sm">
+                    <span class="fw-bold">{{ session.get('username') }}</span>
+                </a>
+                
+                <a href="/inbox" class="btn btn-ghost btn-sm me-2">📥 Dead Drops</a>
+                <a href="/logout" class="btn btn-outline-danger border-0 btn-sm opacity-75">Disconnect</a>
+            {% else %}
+                <a href="/" class="btn btn-ghost btn-sm me-2">Gateway</a>
+                <a href="/register" class="btn btn-glow btn-sm px-3">Join Grid</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<div class="container fade-in-element" style="max-width: 800px;">
+	{% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-dark border-{{ category }} text-white alert-dismissible fade show shadow-sm rounded-4" role="alert" style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);">
+            <strong class="text-{{ category }}">System:</strong> {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    {% if search_query %}
+        <h2 class="mb-4 fw-bold">Query: <span class="accent-purple">"{{ search_query }}"</span></h2>
+        <a href="/feed" class="btn btn-ghost btn-sm mb-4">← Clear Scan</a>
+        
+        {% if matched_authors %}
+            <h5 class="text-muted-custom border-bottom border-secondary pb-2">Identities Found</h5>
+            <div class="row mb-4">
+                {% for ma in matched_authors %}
+                <div class="col-md-4 mb-2">
+                    <div class="glass-card p-3 text-center">
+                        <img src="https://ui-avatars.com/api/?name={{ ma.username }}&background=random&color=fff" class="user-avatar mb-2" style="width: 50px; height: 50px;">
+                        <h5 class="fw-bold">{{ ma.username }} ✓</h5>
+                        <span class="badge bg-purple bg-opacity-25 text-light mb-3 border border-secondary">Trust: {{ "%.1f"|format(ma.ai_trust_score) }}</span><br>
+                        <a href="/profile/{{ ma.username }}" class="btn btn-ghost btn-sm w-100">View Dossier</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <h5 class="text-muted-custom border-bottom border-secondary pb-2 mt-4">Transmissions Found</h5>
+        {% endif %}
+        
+    {% else %}
+        <div class="text-center mb-5">
+            <h1 class="fw-bold mb-2">The Global Grid</h1>
+            <p class="text-muted-custom">Unfiltered signal. Encrypted pathways.</p>
+        </div>
+        
+        {% if session.get('user_id') %}
+        <ul class="nav nav-pills justify-content-center mb-5">
+            <li class="nav-item">
+                <a class="nav-link {% if feed_type == 'global' or not feed_type %}active{% endif %}" href="/feed?feed=global">Global Radar 🌍</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if feed_type == 'following' %}active{% endif %}" href="/feed?feed=following">Tracked Agents 👥</a>
+            </li>
+        </ul>
+        {% endif %}
+    {% endif %}
+
+    <div class="glass-card mb-5 p-1 overflow-hidden">
+        <div class="bg-dark bg-opacity-50 p-4">
+        {% if session.get('user_id') %}
+            <form action="/post_dispatch" method="POST" enctype="multipart/form-data">
+                <input type="text" class="form-control seamless-textarea fs-5 mb-2 fw-bold" name="title" placeholder="Transmission Title (Optional)...">
+                <textarea class="form-control seamless-textarea mb-3" name="content" rows="2" required placeholder="Broadcast your signal to the grid..."></textarea>
+                
+                <hr class="border-secondary opacity-25">
+                
+                <div class="row align-items-center mt-3">
+                    <div class="col-md-7">
+                        <label class="small text-muted-custom mb-1">Attach Media</label>
+                        <input type="file" class="form-control form-control-sm custom-input" name="media_upload" accept="image/*,video/*">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="small text-muted-custom mb-1">Self-Destruct Timer</label>
+                        <input type="datetime-local" class="form-control form-control-sm custom-input text-secondary" name="expiration_time">
+                    </div>
+                </div>
+                <div class="d-flex gap-3 mt-4">
+                    <button type="submit" name="post_type" value="named" class="btn btn-glow flex-grow-1">Transmit as Verified ✓</button>
+                    <button type="submit" name="post_type" value="anonymous" class="btn btn-ghost flex-grow-1">Transmit as Ghost 👻</button>
+                </div>
+            </form>
+        {% else %}
+            <form action="/post_anonymous" method="POST" enctype="multipart/form-data">
+                <input type="text" class="form-control seamless-textarea fs-5 mb-2 fw-bold" name="title" placeholder="Ghost Transmission Title...">
+                <textarea class="form-control seamless-textarea mb-3" name="content" rows="2" required placeholder="What does the grid need to know?"></textarea>
+                
+                <hr class="border-secondary opacity-25">
+
+                <div class="row align-items-center mt-3">
+                    <div class="col-md-7">
+                        <label class="small text-muted-custom mb-1">Attach Media</label>
+                        <input type="file" class="form-control form-control-sm custom-input" name="media_upload" accept="image/*,video/*">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="small text-muted-custom mb-1">Self-Destruct Timer</label>
+                        <input type="datetime-local" class="form-control form-control-sm custom-input text-secondary" name="expiration_time">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-glow w-100 mt-4 py-2 fs-5">Transmit into the Void 👻</button>
+            </form>
+        {% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-end border-bottom border-secondary border-opacity-50 pb-2 mb-4">
+        <h5 class="text-muted-custom mb-0">Live Transmissions</h5>
+        <div class="spinner-grow spinner-grow-sm text-secondary" role="status"><span class="visually-hidden">Loading...</span></div>
+    </div>
+    
+    {% for post in dispatches %}
+    <div class="glass-card mb-4 p-4 fade-in-element" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center">
+                {% if post.is_anonymous %}
+                    <div class="user-avatar bg-dark d-flex align-items-center justify-content-center me-2 border-secondary">👻</div>
+                    <span class="text-light opacity-75 fw-bold">{{ post.username }}</span>
+                {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ post.username }}&background=random&color=fff" class="user-avatar me-2">
+                    <a href="/profile/{{ post.username }}" class="text-white text-decoration-none fw-bold">{{ post.username }} ✓</a>
+                {% endif %}
+            </div>
+            <small class="text-muted-custom">{{ post.created_at.strftime('%H:%M • %b %d') }}</small>
+        </div>
+        
+        {% if post.title %}
+            <h4 class="fw-bold mb-2">{{ post.title }}</h4>
+        {% endif %}
+        
+        <p class="fs-5 text-light opacity-75" style="white-space: pre-wrap; line-height: 1.6;">{{ post.content }}</p>
+        
+        {% if post.media_url %}
+            <div class="mb-3 mt-4">
+            {% if post.media_url.lower().endswith('.mp4') or post.media_url.lower().endswith('.mov') %}
+                <video controls class="w-100 rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; background: #000;">
+                    <source src="{{ post.media_url }}" type="video/mp4">
+                </video>
+            {% else %}
+                <img src="{{ post.media_url }}" class="img-fluid rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; object-fit: cover; width: 100%; background: #0a0a0a;">
+            {% endif %}
+            </div>
+        {% endif %}
+        
+        <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+            <a href="/dispatch/{{ post.id }}" class="btn btn-ghost btn-sm px-4 rounded-pill">Decrypt & Discuss →</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center mt-5 p-5 glass-card fade-in-element">
+        <span class="fs-1 opacity-50">📡</span>
+        <h4 class="text-muted-custom mb-0 mt-3">The grid is silent.</h4>
+    </div>
+    {% endfor %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

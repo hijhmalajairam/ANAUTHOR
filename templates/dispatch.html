@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Decrypt Signal - AnyAuthor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* THE DARK GRID AESTHETIC */
+        body {
+            background: radial-gradient(circle at center, #111827 0%, #000000 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding-bottom: 5rem;
+            min-height: 100vh;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-element { animation: fadeInUp 0.6s ease-out forwards; }
+
+        /* Floating Navbar */
+        .navbar-custom {
+            background: rgba(5, 5, 5, 0.7) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .brand-logo {
+            font-weight: 800; letter-spacing: -1px;
+            background: linear-gradient(to right, #ffffff, #a855f7);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(20, 20, 20, 0.4);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .comment-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+        .comment-card:hover { background: rgba(255, 255, 255, 0.04); }
+
+        /* Inputs & Textareas */
+        .custom-input {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #ffffff !important;
+            border-radius: 10px;
+        }
+        .custom-input:focus {
+            border-color: #f59e0b !important; /* Amber glow for discussions */
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15) !important;
+        }
+
+        /* Buttons */
+        .btn-glow {
+            background: #ffffff; color: #000000; font-weight: 700; border: none; border-radius: 10px; transition: all 0.2s;
+        }
+        .btn-glow:hover { background: #e2e8f0; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+        
+        .btn-ghost {
+            background: rgba(255,255,255,0.03); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; transition: all 0.2s;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: #ffffff; }
+
+        .btn-amber {
+            background: #f59e0b; color: #000; font-weight: 600; border: none; border-radius: 8px;
+        }
+        .btn-amber:hover { background: #fbbf24; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+
+        /* Avatars */
+        .user-avatar {
+            width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        /* Text Adjustments */
+        .text-muted-custom { color: #9ca3af !important; }
+        .accent-amber { color: #f59e0b !important; }
+        
+        /* AI Fact Check Box */
+        .ai-box {
+            background: rgba(168, 85, 247, 0.1);
+            border-left: 4px solid #a855f7;
+            border-radius: 0 12px 12px 0;
+        }
+        .ai-box.debunked {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+        .ai-box.verified {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-5 py-3">
+    <div class="container">
+        <a class="navbar-brand brand-logo fs-3" href="/feed">AnyAuthor.</a>
+        <div class="d-flex align-items-center ms-auto">
+            <a href="/feed" class="btn btn-ghost btn-sm me-2">← Back to Grid</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container fade-in-element" style="max-width: 800px;">
+    
+    <div class="glass-card mb-5 p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary border-opacity-25 pb-3">
+            <div class="d-flex align-items-center">
+                {% if dispatch.is_anonymous %}
+                    <div class="user-avatar bg-dark d-flex align-items-center justify-content-center me-3 border-secondary fs-5">👻</div>
+                    <div>
+                        <span class="text-light opacity-75 fw-bold d-block">Ghost Transmission</span>
+                        <small class="text-muted-custom">{{ dispatch.username }}</small>
+                    </div>
+                {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ dispatch.username }}&background=random&color=fff" class="user-avatar me-3">
+                    <div>
+                        <a href="/profile/{{ dispatch.username }}" class="text-white text-decoration-none fw-bold d-block">{{ dispatch.username }} ✓</a>
+                        <small class="text-muted-custom">Verified Agent</small>
+                    </div>
+                {% endif %}
+            </div>
+            <small class="text-muted-custom">{{ dispatch.created_at.strftime('%H:%M • %b %d, %Y') }}</small>
+        </div>
+        
+        {% if dispatch.title %}
+            <h2 class="fw-bold mb-3">{{ dispatch.title }}</h2>
+        {% endif %}
+        
+        <p class="fs-4 text-light opacity-90 mb-4" style="white-space: pre-wrap; line-height: 1.6;">{{ dispatch.content }}</p>
+        
+        {% if dispatch.media_url %}
+            <div class="mb-4">
+            {% if dispatch.media_url.lower().endswith('.mp4') or dispatch.media_url.lower().endswith('.mov') %}
+                <video controls class="w-100 rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; background: #000;">
+                    <source src="{{ dispatch.media_url }}" type="video/mp4">
+                </video>
+            {% else %}
+                <img src="{{ dispatch.media_url }}" class="img-fluid rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 600px; object-fit: contain; width: 100%; background: #0a0a0a;">
+            {% endif %}
+            </div>
+        {% endif %}
+
+        {% if dispatch.fact_check_result %}
+            <div class="ai-box p-3 mb-4 {% if dispatch.is_debunked %}debunked{% elif 'VERIFIED' in dispatch.fact_check_result %}verified{% endif %}">
+                <strong class="d-block mb-1">🤖 AI Sentinel Analysis:</strong>
+                <span class="opacity-75">{{ dispatch.fact_check_result }}</span>
+            </div>
+        {% else %}
+            <form action="/trigger_fact_check/{{ dispatch.id }}" method="POST" class="mb-4">
+                <button type="submit" class="btn btn-ghost btn-sm text-muted-custom border-secondary">🔍 Request AI Verification</button>
+            </form>
+        {% endif %}
+        
+        <div class="d-flex justify-content-between align-items-center bg-dark bg-opacity-50 p-3 rounded-3 border border-secondary border-opacity-25 mt-4">
+            <span class="fs-5">
+                <strong class="text-white">Grid Rating:</strong> 
+                {% if rating.avg_rating %}
+                    <span class="accent-amber">{{ "★" * (rating.avg_rating | round | int) }}</span>
+                    <span class="text-muted-custom fs-6 ms-2">({{ "%.1f"|format(rating.avg_rating) }} from {{ rating.rating_count }})</span>
+                {% else %}
+                    <span class="text-muted-custom">Unrated</span>
+                {% endif %}
+            </span>
+            
+            {% if session.get('user_id') %}
+            <form action="/dispatch/{{ dispatch.id }}/rate" method="POST" class="d-flex gap-2">
+                <input type="number" name="rating" min="1" max="10" class="form-control form-control-sm custom-input text-center" placeholder="1-10" required style="width: 70px;">
+                <button type="submit" class="btn btn-amber btn-sm px-3">Rate</button>
+            </form>
+            {% else %}
+            <small class="text-muted-custom">Log in to rate.</small>
+            {% endif %}
+        </div>
+    </div>
+
+    <h4 class="mb-3 fw-bold">Live Discussion</h4>
+    
+    <div class="glass-card p-3 mb-4">
+        <form action="/dispatch/{{ dispatch.id }}/comment" method="POST">
+            <textarea class="form-control custom-input border-0 mb-3" name="comment_content" rows="2" required placeholder="Add to the signal..."></textarea>
+            <div class="text-end">
+                <button type="submit" class="btn btn-glow px-4">Transmit</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="mb-5">
+        {% for comment in comments %}
+        <div class="comment-card p-3 mb-2 fade-in-element" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>
+                    {% if comment.is_anonymous %}
+                        <span class="text-muted-custom">👻 {{ comment.username }}</span>
+                    {% else %}
+                        <a href="/profile/{{ comment.username }}" class="text-info text-decoration-none">{{ comment.username }} ✓</a>
+                    {% endif %}
+                </strong>
+                <small class="text-muted-custom" style="font-size: 0.8rem;">{{ comment.created_at.strftime('%b %d, %H:%M') }}</small>
+            </div>
+            <p class="mb-0 text-light opacity-75">{{ comment.content }}</p>
+        </div>
+        {% else %}
+        <div class="text-center p-4">
+            <p class="text-muted-custom mb-0">No signals found. Be the first to transmit.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
