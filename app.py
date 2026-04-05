@@ -59,12 +59,23 @@ def fact_check_content(text):
 
 def get_db_connection():
     try:
-        return psycopg2.connect(
-            host=os.getenv('DB_HOST'), database=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), port=os.getenv('DB_PORT')
-        )
+        # This checks if DATABASE_URL exists (which we set in Render)
+        db_url = os.getenv('DATABASE_URL')
+        
+        if db_url:
+            # If on Render, use the Cloud URL
+            return psycopg2.connect(db_url)
+        else:
+            # If on your laptop, use the local settings from .env
+            return psycopg2.connect(
+                host=os.getenv('DB_HOST'),
+                database=os.getenv('DB_NAME'),
+                user=os.getenv('DB_USER'),
+                password=os.getenv('DB_PASSWORD'),
+                port=os.getenv('DB_PORT')
+            )
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        print(f"!!! Database Connection Error: {e} !!!")
         return None
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -109,6 +120,7 @@ def logout():
 # --- THE FRONT DOOR (GATEWAY) ---
 @app.route('/')
 def gateway():
+    # If logged in, go to feed. If not, show login page.
     if 'user_id' in session:
         return redirect(url_for('index'))
     return render_template('login.html')
