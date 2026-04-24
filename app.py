@@ -10,7 +10,6 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from google import genai
 import pytz
-from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -26,7 +25,6 @@ def get_ist_time():
     """Returns current time in India Standard Time"""
     ist = pytz.timezone('Asia/Kolkata')
     return datetime.now(ist)
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -125,7 +123,6 @@ def logout():
     session.clear()
     return redirect(url_for('gateway')) # Sends you back to the front door
 
-
 # --- THE FRONT DOOR (GATEWAY) ---
 @app.route('/')
 def gateway():
@@ -134,26 +131,27 @@ def gateway():
         return redirect(url_for('index'))
     return render_template('login.html')
 
+# --- THE MAIN GRID (FEED) ---
 @app.route('/feed')
 def index():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-
-    # 1. Delete standard expired posts and messages
-    cur.execute("DELETE FROM Dispatches WHERE expires_at < NOW()")
-    cur.execute("DELETE FROM Messages WHERE expires_at < NOW()") 
-
+    
+    # 1. Delete standard expired posts and messages (Using IST)
+    cur.execute("DELETE FROM Dispatches WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'")
+    cur.execute("DELETE FROM Messages WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'") 
+    
     # 2. Prevent the crash: Delete messages sent or received by expired ghosts FIRST
     cur.execute("""
         DELETE FROM Messages 
-        WHERE sender_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < NOW())
-           OR receiver_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < NOW())
+        WHERE sender_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
+           OR receiver_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')
     """)
-
+    
     # 3. Now it is safe to delete the expired ghosts
-    cur.execute("DELETE FROM Authors WHERE is_anonymous = True AND expires_at < NOW()")
-
-    conn.commit()
+    cur.execute("DELETE FROM Authors WHERE is_anonymous = True AND expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'")
+    
+    conn.commit() 
     
     feed_type = request.args.get('feed', 'global')
     if feed_type == 'following' and 'user_id' in session:
@@ -239,7 +237,7 @@ def post_dispatch():
 
     if post_type == 'named': author_id = session['user_id']
     else:
-       ghost_expiry = expiration_time if expiration_time else (get_ist_time() + timedelta(hours=24))
+        ghost_expiry = expiration_time if expiration_time else (get_ist_time() + timedelta(hours=24))
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
@@ -298,9 +296,9 @@ def inbox():
     if 'user_id' not in session: return redirect(url_for('login'))
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("DELETE FROM Messages WHERE expires_at < NOW()") # Inbox-specific cleanup
+    cur.execute("DELETE FROM Messages WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'") # Inbox-specific cleanup
     conn.commit()
-    cur.execute('''SELECT m.content, m.deliver_at, m.expires_at, a.username as sender_username FROM Messages m JOIN Authors a ON m.sender_id = a.id WHERE m.receiver_id = %s AND m.deliver_at <= NOW() ORDER BY m.deliver_at DESC''', (session['user_id'],))
+    cur.execute('''SELECT m.content, m.deliver_at, m.expires_at, a.username as sender_username FROM Messages m JOIN Authors a ON m.sender_id = a.id WHERE m.receiver_id = %s AND m.deliver_at <= CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata' ORDER BY m.deliver_at DESC''', (session['user_id'],))
     messages = cur.fetchall()
     cur.close(); conn.close()
     return render_template('inbox.html', messages=messages)
@@ -446,6 +444,7 @@ def view_profile(username):
     
     cur.close(); conn.close()
     return render_template('profile.html', author=author, dispatches=dispatches, stats=stats, session=session)
+
 # --- NEW: EDIT PROFILE ENGINE ---
 @app.route('/edit_profile', methods=['POST'])
 def edit_profile():
@@ -471,5 +470,6 @@ def edit_profile():
     conn.commit()
     cur.close(); conn.close()
     return redirect(url_for('profile', username=session['username']))
+
 if __name__ == '__main__':
     app.run(debug=True)
