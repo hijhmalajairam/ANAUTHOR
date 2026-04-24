@@ -9,6 +9,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from google import genai
+import pytz
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -19,6 +21,12 @@ UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True) 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov'}
+
+def get_ist_time():
+    """Returns current time in India Standard Time"""
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist)
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -116,6 +124,7 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('gateway')) # Sends you back to the front door
+
 
 # --- THE FRONT DOOR (GATEWAY) ---
 @app.route('/')
@@ -230,7 +239,7 @@ def post_dispatch():
 
     if post_type == 'named': author_id = session['user_id']
     else:
-        ghost_expiry = expiration_time if expiration_time else (datetime.now() + timedelta(hours=24))
+       ghost_expiry = expiration_time if expiration_time else (get_ist_time() + timedelta(hours=24))
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
@@ -301,7 +310,7 @@ def send_message():
     # REMOVED the login block! Anyone can send a message now.
     receiver_username = request.form['receiver_username']
     content = request.form['content']
-    deliver_at = datetime.fromisoformat(request.form.get('deliver_at')) if request.form.get('deliver_at') else datetime.now()
+    deliver_at = datetime.fromisoformat(request.form.get('deliver_at')) if request.form.get('deliver_at') else get_ist_time()
     
     # Check if expires_at is in the form (from profile page), otherwise ignore it
     expires_at = None
@@ -315,7 +324,7 @@ def send_message():
     if 'user_id' in session:
         sender_id = session['user_id']
     else:
-        ghost_expiry = expires_at if expires_at else (datetime.now() + timedelta(days=7))
+        ghost_expiry = expires_at if expires_at else (get_ist_time() + timedelta(days=7))
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         sender_id = cur.fetchone()[0]
