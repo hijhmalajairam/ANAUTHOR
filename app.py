@@ -125,26 +125,25 @@ def gateway():
         return redirect(url_for('index'))
     return render_template('login.html')
 
-# --- THE MAIN GRID (FEED) ---
 @app.route('/feed')
 def index():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
+
     # 1. Delete standard expired posts and messages
     cur.execute("DELETE FROM Dispatches WHERE expires_at < NOW()")
     cur.execute("DELETE FROM Messages WHERE expires_at < NOW()") 
-    
+
     # 2. Prevent the crash: Delete messages sent or received by expired ghosts FIRST
     cur.execute("""
         DELETE FROM Messages 
         WHERE sender_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < NOW())
            OR receiver_id IN (SELECT id FROM Authors WHERE is_anonymous = True AND expires_at < NOW())
     """)
-    
+
     # 3. Now it is safe to delete the expired ghosts
     cur.execute("DELETE FROM Authors WHERE is_anonymous = True AND expires_at < NOW()")
-    
+
     conn.commit()
     
     feed_type = request.args.get('feed', 'global')
