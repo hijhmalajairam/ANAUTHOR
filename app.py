@@ -6,11 +6,15 @@ from dotenv import load_dotenv
 from blueprints.auth import auth_bp
 from blueprints.pages import pages_bp
 from blueprints.actions import actions_bp
+from security import limiter  
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+
+# Turn on the security limiter
+limiter.init_app(app)
 
 # Set up global configs
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
