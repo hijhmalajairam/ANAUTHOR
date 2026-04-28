@@ -26,7 +26,6 @@ def index():
     conn.commit() 
     
     feed_type = request.args.get('feed', 'global')
-   feed_type = request.args.get('feed', 'global')
     
     if 'user_id' in session:
         # Logged in users see 'live' posts, PLUS their own 'pending' or 'dead' posts
