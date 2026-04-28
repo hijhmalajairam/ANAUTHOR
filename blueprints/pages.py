@@ -26,10 +26,26 @@ def index():
     conn.commit() 
     
     feed_type = request.args.get('feed', 'global')
-    if feed_type == 'following' and 'user_id' in session:
-        cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous FROM Dispatches d JOIN Authors a ON d.author_id = a.id JOIN Follows f ON a.id = f.followed_id WHERE f.follower_id = %s ORDER BY d.created_at DESC''', (session['user_id'],))
+   feed_type = request.args.get('feed', 'global')
+    
+    if 'user_id' in session:
+        # Logged in users see 'live' posts, PLUS their own 'pending' or 'dead' posts
+        if feed_type == 'following':
+            cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
+                           FROM Dispatches d JOIN Authors a ON d.author_id = a.id JOIN Follows f ON a.id = f.followed_id 
+                           WHERE f.follower_id = %s AND (d.visibility = 'live' OR d.author_id = %s) 
+                           ORDER BY d.created_at DESC''', (session['user_id'], session['user_id']))
+        else:
+            cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
+                           FROM Dispatches d JOIN Authors a ON d.author_id = a.id 
+                           WHERE d.visibility = 'live' OR d.author_id = %s 
+                           ORDER BY d.created_at DESC''', (session['user_id'],))
     else:
-        cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous FROM Dispatches d JOIN Authors a ON d.author_id = a.id ORDER BY d.created_at DESC''')
+        # Public visitors ONLY see 'live' posts
+        cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
+                       FROM Dispatches d JOIN Authors a ON d.author_id = a.id 
+                       WHERE d.visibility = 'live' 
+                       ORDER BY d.created_at DESC''')
         
     dispatches = cur.fetchall()
     cur.close(); conn.close()
