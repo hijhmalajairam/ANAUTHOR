@@ -81,10 +81,10 @@ def post_dispatch():
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
-
-    # --- SPEED FIX: Insert pending status, save immediately, THEN launch thread ---
-    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id', 
-                (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False))
+-
+  # --- SPEED FIX: Insert as 'pending', save immediately ---
+    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
+                (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
     
     conn.commit()
