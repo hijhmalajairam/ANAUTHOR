@@ -8,7 +8,6 @@
     <style>
         /* THE TRUE GLASSMORPHISM AESTHETIC */
         body {
-            /* Deep, dark radial gradient background to give the glass something to blur */
             background: radial-gradient(circle at center, #111827 0%, #000000 100%);
             background-attachment: fixed;
             color: #ffffff;
@@ -52,7 +51,7 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-top: 1px solid rgba(255, 255, 255, 0.15); /* Frosted top edge */
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -119,9 +118,6 @@
     </style>
 </head>
 <body>
-	<div style="background-color: #111; color: #00ff00; padding: 10px; text-align: center; font-family: monospace; border-bottom: 1px solid #333; margin-bottom: 20px;">
-    <strong>GRID RADAR:</strong> 🟢 {{ live_verified }} Agents Online &nbsp;|&nbsp; 👻 {{ live_ghosts }} Ghosts in the System
-</div>
 
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-5 py-3">
     <div class="container">
@@ -150,7 +146,7 @@
 </nav>
 
 <div class="container fade-in-element" style="max-width: 800px;">
-	{% with messages = get_flashed_messages(with_categories=true) %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
           <div class="alert alert-dark border-{{ category }} text-white alert-dismissible fade show shadow-sm rounded-4" role="alert" style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);">
@@ -186,6 +182,10 @@
         <div class="text-center mb-5">
             <h1 class="fw-bold mb-2">The Global Grid</h1>
             <p class="text-muted-custom">Unfiltered signal. Encrypted pathways.</p>
+        </div>
+
+        <div style="background: rgba(20, 20, 20, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); color: #9ca3af; padding: 12px; text-align: center; font-family: monospace; border-radius: 12px; margin-bottom: 30px;">
+            <strong>GRID RADAR:</strong> <span class="text-success">🟢 {{ live_verified }} Agents Online</span> &nbsp;|&nbsp; <span class="text-white opacity-75">👻 {{ live_ghosts }} Ghosts in the System</span>
         </div>
         
         {% if session.get('user_id') %}
