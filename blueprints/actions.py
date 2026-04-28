@@ -3,7 +3,8 @@ import os, random, string
 from datetime import timedelta, datetime
 from werkzeug.utils import secure_filename
 from db import get_db_connection
-from helpers import get_ist_time, allowed_file, check_content_safety, fact_check_content
+from helpers import get_ist_time, allowed_file, check_content_safety, run_background_fact_check
+import threading
 
 actions_bp = Blueprint('actions', __name__)
 
