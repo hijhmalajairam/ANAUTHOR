@@ -47,25 +47,24 @@ def fact_check_content(text):
 def run_background_fact_check(dispatch_id, text, author_id):
     """Runs in the background so the user doesn't have to wait."""
     try:
-        # 1. Ask Google for the fact check
         full_result, is_debunked = fact_check_content(text)
         
-        # 2. Open a new database connection just for this background worker
+        # If the AI hates it, it's dead. Otherwise, it's live.
+        new_visibility = 'dead' if is_debunked else 'live'
+        
+        from db import get_db_connection
         conn = get_db_connection()
         if not conn: return
         cur = conn.cursor()
         
-        # 3. Update the post with the AI's final verdict
-        cur.execute("UPDATE Dispatches SET fact_check_result = %s, is_debunked = %s WHERE id = %s", 
-                    (full_result, is_debunked, dispatch_id))
+        cur.execute("UPDATE Dispatches SET fact_check_result = %s, is_debunked = %s, visibility = %s WHERE id = %s", 
+                    (full_result, is_debunked, new_visibility, dispatch_id))
         
-        # 4. If it was debunked, penalize the author's trust score
         if is_debunked and author_id:
             cur.execute("UPDATE Authors SET ai_trust_score = GREATEST(1.0, ai_trust_score - 1.5) WHERE id = %s AND is_anonymous = False", 
                         (author_id,))
             
         conn.commit()
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
     except Exception as e:
         print(f"Background Fact Check Failed: {e}")
