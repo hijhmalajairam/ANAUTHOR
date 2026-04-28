@@ -4,6 +4,7 @@ from datetime import timedelta, datetime
 from werkzeug.utils import secure_filename
 from db import get_db_connection
 from helpers import get_ist_time, allowed_file, check_content_safety, run_background_fact_check
+from security import limiter  # <-- Added your new security shield
 import threading
 
 actions_bp = Blueprint('actions', __name__)
@@ -35,11 +36,16 @@ def post_anonymous():
     cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, expiration_time))
     author_id = cur.fetchone()[0]
     
-    full_result, is_debunked = fact_check_content(post_content)
-    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked) VALUES (%s, %s, %s, %s, %s, %s, %s)', (author_id, title, post_content, media_url, expiration_time, full_result, is_debunked))
+    # --- SPEED FIX: Insert pending status, save immediately, THEN launch thread ---
+    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id', 
+                (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False))
+    dispatch_id = cur.fetchone()[0]
     
     conn.commit()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
+    
+    threading.Thread(target=run_background_fact_check, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
 @actions_bp.route('/post_dispatch', methods=['POST'])
@@ -75,9 +81,16 @@ def post_dispatch():
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
 
-    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at) VALUES (%s, %s, %s, %s, %s)', (author_id, title, post_content, media_url, expiration_time))
+    # --- SPEED FIX: Insert pending status, save immediately, THEN launch thread ---
+    cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id', 
+                (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False))
+    dispatch_id = cur.fetchone()[0]
+    
     conn.commit()
-    cur.close(); conn.close()
+    cur.close()
+    conn.close()
+
+    threading.Thread(target=run_background_fact_check, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
 @actions_bp.route('/dispatch/<int:dispatch_id>/comment', methods=['POST'])
@@ -111,6 +124,7 @@ def rate_dispatch(dispatch_id):
     return redirect(url_for('pages.view_dispatch', dispatch_id=dispatch_id))
 
 @actions_bp.route('/send_message', methods=['POST'])
+@limiter.limit("5 per minute") # <-- ADDED: Bot spam shield is active!
 def send_message():
     receiver_username = request.form['receiver_username']
     content = request.form['content']
