@@ -3,8 +3,9 @@ import os, random, string
 from datetime import timedelta, datetime
 from werkzeug.utils import secure_filename
 from db import get_db_connection
-from helpers import get_ist_time, allowed_file, check_content_safety, run_background_fact_check, fact_check_content
-from security import limiter  # <-- Added your new security shield
+# NOTE: We now ONLY import the background combo function, we don't run AI on the main thread anymore
+from helpers import get_ist_time, allowed_file, run_background_ai_checks, fact_check_content
+from security import limiter  
 import threading
 
 actions_bp = Blueprint('actions', __name__)
@@ -21,10 +22,6 @@ def post_anonymous():
         media_file.save(save_path)
         media_url = f"/{save_path}" 
     
-    if not check_content_safety(post_content):
-        flash("Your ghost dispatch was blocked by the AI Sentinel for violating safety guidelines.", "danger")
-        return redirect(url_for('pages.index'))
-    
     expiration_time = None
     if request.form.get('expiration_time'):
         try: expiration_time = datetime.fromisoformat(request.form.get('expiration_time'))
@@ -36,8 +33,7 @@ def post_anonymous():
     cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, expiration_time))
     author_id = cur.fetchone()[0]
     
-   
-# --- SPEED FIX: Insert as 'pending', save immediately ---
+    # INSTANT SPEED: Insert as 'pending', save immediately, no AI roadblock
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -46,7 +42,8 @@ def post_anonymous():
     cur.close()
     conn.close()
     
-    threading.Thread(target=run_background_fact_check, args=(dispatch_id, post_content, author_id)).start()
+    # Fire the background AI worker
+    threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
 @actions_bp.route('/post_dispatch', methods=['POST'])
@@ -61,10 +58,6 @@ def post_dispatch():
         save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         media_file.save(save_path)
         media_url = f"/{save_path}" 
-    
-    if not check_content_safety(post_content):
-        flash("Your dispatch was blocked by the AI Sentinel.", "danger")
-        return redirect(url_for('pages.index'))
         
     post_type = request.form.get('post_type') 
     expiration_time = None
@@ -81,8 +74,8 @@ def post_dispatch():
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
--
-  # --- SPEED FIX: Insert as 'pending', save immediately ---
+
+    # INSTANT SPEED: Insert as 'pending', save immediately, no AI roadblock
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -91,7 +84,8 @@ def post_dispatch():
     cur.close()
     conn.close()
 
-    threading.Thread(target=run_background_fact_check, args=(dispatch_id, post_content, author_id)).start()
+    # Fire the background AI worker
+    threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
 @actions_bp.route('/dispatch/<int:dispatch_id>/comment', methods=['POST'])
@@ -125,7 +119,7 @@ def rate_dispatch(dispatch_id):
     return redirect(url_for('pages.view_dispatch', dispatch_id=dispatch_id))
 
 @actions_bp.route('/send_message', methods=['POST'])
-@limiter.limit("5 per minute") # <-- ADDED: Bot spam shield is active!
+@limiter.limit("5 per minute") 
 def send_message():
     receiver_username = request.form['receiver_username']
     content = request.form['content']
