@@ -3,7 +3,7 @@ import os, random, string
 from datetime import timedelta, datetime
 from werkzeug.utils import secure_filename
 from db import get_db_connection
-from helpers import get_ist_time, allowed_file, check_content_safety, run_background_fact_check
+from helpers import get_ist_time, allowed_file, check_content_safety, run_background_fact_check, fact_check_content
 from security import limiter  # <-- Added your new security shield
 import threading
 
