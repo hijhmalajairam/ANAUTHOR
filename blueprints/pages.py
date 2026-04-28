@@ -15,6 +15,7 @@ def index():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
+    # 1. Clean up expired ghosts and messages
     cur.execute("DELETE FROM Dispatches WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'")
     cur.execute("DELETE FROM Messages WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'") 
     cur.execute("""
@@ -27,8 +28,21 @@ def index():
     
     feed_type = request.args.get('feed', 'global')
     
+    # 2. PRIVACY RADAR: Update activity and count users
     if 'user_id' in session:
-        # Logged in users see 'live' posts, PLUS their own 'pending' or 'dead' posts
+        cur.execute("UPDATE Authors SET last_active = CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata' WHERE id = %s", (session['user_id'],))
+        conn.commit()
+        
+    # Count Verified users active in the last 15 minutes
+    cur.execute("SELECT COUNT(*) FROM Authors WHERE is_anonymous = False AND last_active >= CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata' - INTERVAL '15 minutes'")
+    live_verified = cur.fetchone()['count']
+    
+    # Count Ghosts currently surviving in the grid (since we delete expired ones)
+    cur.execute("SELECT COUNT(*) FROM Authors WHERE is_anonymous = True")
+    live_ghosts = cur.fetchone()['count']
+
+    # 3. Load the Feed
+    if 'user_id' in session:
         if feed_type == 'following':
             cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
                            FROM Dispatches d JOIN Authors a ON d.author_id = a.id JOIN Follows f ON a.id = f.followed_id 
@@ -40,7 +54,6 @@ def index():
                            WHERE d.visibility = 'live' OR d.author_id = %s 
                            ORDER BY d.created_at DESC''', (session['user_id'],))
     else:
-        # Public visitors ONLY see 'live' posts
         cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
                        FROM Dispatches d JOIN Authors a ON d.author_id = a.id 
                        WHERE d.visibility = 'live' 
@@ -48,7 +61,9 @@ def index():
         
     dispatches = cur.fetchall()
     cur.close(); conn.close()
-    return render_template('index.html', dispatches=dispatches, session=session, feed_type=feed_type)
+    
+    # Send the live stats to the HTML page
+    return render_template('index.html', dispatches=dispatches, session=session, feed_type=feed_type, live_verified=live_verified, live_ghosts=live_ghosts)
 
 @pages_bp.route('/search')
 def search():
