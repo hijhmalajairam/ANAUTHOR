@@ -44,18 +44,27 @@ def fact_check_content(text):
     except Exception as e:
         return f"[System Crash] Reason: {str(e)}", False
 
-def run_background_fact_check(dispatch_id, text, author_id):
-    """Runs in the background so the user doesn't have to wait."""
+def run_background_ai_checks(dispatch_id, text, author_id):
+    """Runs BOTH Safety and Fact checks in the background."""
     try:
-        full_result, is_debunked = fact_check_content(text)
-        
-        # If the AI hates it, it's dead. Otherwise, it's live.
-        new_visibility = 'dead' if is_debunked else 'live'
-        
         from db import get_db_connection
         conn = get_db_connection()
         if not conn: return
         cur = conn.cursor()
+        
+        # 1. Check Safety First
+        is_safe = check_content_safety(text)
+        if not is_safe:
+            # If it's illegal, kill it immediately and stop checking.
+            cur.execute("UPDATE Dispatches SET fact_check_result = %s, is_debunked = %s, visibility = %s WHERE id = %s", 
+                        ("[AI Sentinel: FLAGGED FOR SAFETY VIOLATION]", True, 'dead', dispatch_id))
+            conn.commit()
+            cur.close(); conn.close()
+            return
+            
+        # 2. If it's safe, run the Fact Check
+        full_result, is_debunked = fact_check_content(text)
+        new_visibility = 'dead' if is_debunked else 'live'
         
         cur.execute("UPDATE Dispatches SET fact_check_result = %s, is_debunked = %s, visibility = %s WHERE id = %s", 
                     (full_result, is_debunked, new_visibility, dispatch_id))
@@ -67,4 +76,4 @@ def run_background_fact_check(dispatch_id, text, author_id):
         conn.commit()
         cur.close(); conn.close()
     except Exception as e:
-        print(f"Background Fact Check Failed: {e}")
+        print(f"Background AI Check Failed: {e}")
