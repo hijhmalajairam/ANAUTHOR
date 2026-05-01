@@ -85,6 +85,66 @@
 </div>
 <!-- ========================================== -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- LIVE SEARCH ENGINE: Instant results as you type -->
+<script>
+    document.addEventListener("turbo:load", function() {
+        const searchInput = document.querySelector('input[name="q"]');
+        const searchForm = document.querySelector('form[action="/search"]');
+        const coreContent = document.getElementById('core-app-content');
+        let debounceTimer;
+
+        if (searchInput && searchForm && coreContent) {
+            
+            const performSearch = async (query) => {
+                // If they delete their search, instantly take them back to the feed
+                if (query.length === 0) {
+                    Turbo.visit('/feed');
+                    return;
+                }
+                
+                // Dim the search bar slightly to show it's thinking
+                searchInput.style.opacity = '0.6'; 
+                
+                try {
+                    // Fetch the search page invisibly in the background
+                    const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+                    const html = await response.text();
+                    
+                    // Rip out the new results
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('core-app-content');
+                    
+                    // Swap the results onto the screen instantly
+                    if (newContent) {
+                        coreContent.innerHTML = newContent.innerHTML;
+                        // Update the URL secretly so the back button still works
+                        window.history.replaceState({}, '', `/search?q=${encodeURIComponent(query)}`);
+                    }
+                } catch (err) {
+                    console.error("Grid Search Interference", err);
+                } finally {
+                    searchInput.style.opacity = '1';
+                }
+            };
+
+            // Listen to every single keystroke
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                const query = this.value.trim();
+                // Wait 300 milliseconds after they stop typing to fire the search (prevents server crashing)
+                debounceTimer = setTimeout(() => performSearch(query), 300); 
+            });
+
+            // Hijack the "Scan" button / Enter key so it doesn't reload the page either
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                performSearch(searchInput.value.trim());
+            });
+        }
+    });
+</script>
 
 <!-- FUTURE-PROOFING: A slot for page-specific Javascript later -->
 {% block extra_js %}{% endblock %}
