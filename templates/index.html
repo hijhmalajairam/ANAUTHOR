@@ -82,7 +82,7 @@
         .user-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); }
         .text-muted-custom { color: #9ca3af !important; }
         .accent-purple { color: #a855f7 !important; }
-        .nav-pills .nav-link { color: #9ca3af; border-radius: 10px; margin: 0 5px; font-weight: 500; transition: all 0.2s; }
+        .nav-pills .nav-link { color: #9ca3af; border-radius: 10px; margin: 0 5px; font-weight: 500; transition: all 0.2s; cursor: pointer; }
         .nav-pills .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
         .nav-pills .nav-link.active { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
     </style>
@@ -156,10 +156,10 @@
         {% if session.get('user_id') %}
         <ul class="nav nav-pills justify-content-center mb-5">
             <li class="nav-item">
-                <a class="nav-link {% if feed_type == 'global' or not feed_type %}active{% endif %}" href="/feed?feed=global">Global Radar 🌍</a>
+                <a class="nav-link feed-tab {% if feed_type == 'global' or not feed_type %}active{% endif %}" href="/feed?feed=global" data-target="/feed?feed=global">Global Radar 🌍</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if feed_type == 'following' %}active{% endif %}" href="/feed?feed=following">Tracked Agents 👥</a>
+                <a class="nav-link feed-tab {% if feed_type == 'following' %}active{% endif %}" href="/feed?feed=following" data-target="/feed?feed=following">Tracked Agents 👥</a>
             </li>
         </ul>
         {% endif %}
@@ -208,59 +208,63 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-end border-bottom border-secondary border-opacity-50 pb-2 mb-4" id="feedHeader">
-        <h5 class="text-muted-custom mb-0">Live Transmissions</h5>
-        <div class="spinner-grow spinner-grow-sm text-secondary" role="status"><span class="visually-hidden">Loading...</span></div>
-    </div>
-    
-    {% for post in dispatches %}
-    <div class="glass-card mb-4 p-4 fade-in-element" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="d-flex align-items-center">
-                {% if post.is_anonymous %}
-                    <div class="user-avatar bg-dark d-flex align-items-center justify-content-center me-2 border-secondary">👻</div>
-                    <span class="text-light opacity-75 fw-bold">{{ post.username }}</span>
-                {% else %}
-                    <img src="https://ui-avatars.com/api/?name={{ post.username }}&background=random&color=fff" class="user-avatar me-2">
-                    <a href="/profile/{{ post.username }}" class="text-white text-decoration-none fw-bold">{{ post.username }} ✓</a>
-                {% endif %}
-            </div>
-            <small class="text-muted-custom">{{ post.created_at.strftime('%H:%M • %b %d') }}</small>
+    <!-- WRAPPER FOR DOM SWAPPING -->
+    <div id="feed-stream">
+        <div class="d-flex justify-content-between align-items-end border-bottom border-secondary border-opacity-50 pb-2 mb-4" id="feedHeader">
+            <h5 class="text-muted-custom mb-0">Live Transmissions</h5>
+            <div class="spinner-grow spinner-grow-sm text-secondary" role="status"><span class="visually-hidden">Loading...</span></div>
         </div>
         
-        {% if post.title %}
-            <h4 class="fw-bold mb-2">{{ post.title }}</h4>
-        {% endif %}
-        
-        <p class="fs-5 text-light opacity-75" style="white-space: pre-wrap; line-height: 1.6;">{{ post.content }}</p>
-        
-        {% if post.media_url %}
-            <div class="mb-3 mt-4">
-            {% if post.media_url.lower().endswith('.mp4') or post.media_url.lower().endswith('.mov') %}
-                <video controls class="w-100 rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; background: #000;">
-                    <source src="{{ post.media_url }}" type="video/mp4">
-                </video>
-            {% else %}
-                <img src="{{ post.media_url }}" class="img-fluid rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; object-fit: cover; width: 100%; background: #0a0a0a;">
+        {% for post in dispatches %}
+        <div class="glass-card mb-4 p-4 fade-in-element" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    {% if post.is_anonymous %}
+                        <div class="user-avatar bg-dark d-flex align-items-center justify-content-center me-2 border-secondary">👻</div>
+                        <span class="text-light opacity-75 fw-bold">{{ post.username }}</span>
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ post.username }}&background=random&color=fff" class="user-avatar me-2">
+                        <a href="/profile/{{ post.username }}" class="text-white text-decoration-none fw-bold">{{ post.username }} ✓</a>
+                    {% endif %}
+                </div>
+                <small class="text-muted-custom">{{ post.created_at.strftime('%H:%M • %b %d') }}</small>
+            </div>
+            
+            {% if post.title %}
+                <h4 class="fw-bold mb-2">{{ post.title }}</h4>
             {% endif %}
+            
+            <p class="fs-5 text-light opacity-75" style="white-space: pre-wrap; line-height: 1.6;">{{ post.content }}</p>
+            
+            {% if post.media_url %}
+                <div class="mb-3 mt-4">
+                {% if post.media_url.lower().endswith('.mp4') or post.media_url.lower().endswith('.mov') %}
+                    <video controls class="w-100 rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; background: #000;">
+                        <source src="{{ post.media_url }}" type="video/mp4">
+                    </video>
+                {% else %}
+                    <img src="{{ post.media_url }}" class="img-fluid rounded-4 border border-secondary border-opacity-25 shadow-sm" style="max-height: 500px; object-fit: cover; width: 100%; background: #0a0a0a;">
+                {% endif %}
+                </div>
+            {% endif %}
+            
+            <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                <a href="/dispatch/{{ post.id }}" class="btn btn-ghost btn-sm px-4 rounded-pill">Decrypt & Discuss →</a>
             </div>
-        {% endif %}
-        
-        <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
-            <a href="/dispatch/{{ post.id }}" class="btn btn-ghost btn-sm px-4 rounded-pill">Decrypt & Discuss →</a>
         </div>
+        {% else %}
+        <div class="text-center mt-5 p-5 glass-card fade-in-element">
+            <span class="fs-1 opacity-50">📡</span>
+            <h4 class="text-muted-custom mb-0 mt-3">The grid is silent.</h4>
+        </div>
+        {% endfor %}
     </div>
-    {% else %}
-    <div class="text-center mt-5 p-5 glass-card fade-in-element">
-        <span class="fs-1 opacity-50">📡</span>
-        <h4 class="text-muted-custom mb-0 mt-3">The grid is silent.</h4>
-    </div>
-    {% endfor %}
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- INSTANT POSTING SCRIPT -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const form = document.getElementById('dispatchForm');
@@ -317,5 +321,52 @@
         });
     });
 </script>
+
+<!-- DOM SWAPPING: INSTANT TAB SWITCHING -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const feedTabs = document.querySelectorAll('.feed-tab');
+        
+        feedTabs.forEach(tab => {
+            tab.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                // Visual update for the tabs
+                feedTabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                const targetUrl = this.getAttribute('data-target');
+                const feedStream = document.getElementById('feed-stream');
+                
+                // Dim current content slightly while fetching
+                feedStream.style.opacity = '0.5';
+                feedStream.style.transition = 'opacity 0.2s ease';
+
+                try {
+                    const response = await fetch(targetUrl);
+                    const htmlText = await response.text();
+                    
+                    const parser = new DOMParser();
+                    const parsedDoc = parser.parseFromString(htmlText, 'text/html');
+                    const newFeedStream = parsedDoc.getElementById('feed-stream');
+                    
+                    if (newFeedStream) {
+                        feedStream.innerHTML = newFeedStream.innerHTML;
+                    }
+                    
+                    // Restore full opacity
+                    feedStream.style.opacity = '1';
+                    
+                    // Update URL bar quietly
+                    window.history.pushState({}, '', targetUrl);
+                } catch (error) {
+                    console.error("DOM Swap Failed:", error);
+                    feedStream.style.opacity = '1'; // Ensure it's visible even on failure
+                }
+            });
+        });
+    });
+</script>
+
 </body>
 </html>
