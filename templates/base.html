@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Grid - AnyAuthor</title>
+    
+    <!-- FUTURE-PROOFING: Allows individual pages to change the browser tab title -->
+    <title>{% block title %}The Grid - AnyAuthor{% endblock %}</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- THE UNIVERSAL TURBO ENGINE (Only needs to be written here once!) -->
+    <!-- THE UNIVERSAL TURBO ENGINE (Makes the whole app a fast Single Page App) -->
     <script src="https://unpkg.com/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
     
     <style>
-        /* ALL YOUR CSS GOES HERE ONCE */
-        body {
-            background: radial-gradient(circle at center, #111827 0%, #000000 100%);
-            background-attachment: fixed;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding-bottom: 5rem;
-            min-height: 100vh;
-        }
+        body { background: radial-gradient(circle at center, #111827 0%, #000000 100%); background-attachment: fixed; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 5rem; min-height: 100vh; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-element { animation: fadeInUp 0.6s ease-out forwards; }
         .navbar-custom { background: rgba(5, 5, 5, 0.7) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: sticky; top: 0; z-index: 1000; }
@@ -41,10 +36,12 @@
         .nav-pills .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
         .nav-pills .nav-link.active { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
     </style>
+
+    <!-- FUTURE-PROOFING: A slot for page-specific CSS later -->
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<!-- THE UNIVERSAL NAVBAR (Only written here once!) -->
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-5 py-3">
     <div class="container">
         <a class="navbar-brand brand-logo fs-3 me-4" href="/feed">AnyAuthor.</a>
@@ -59,16 +56,15 @@
                     <span class="fw-bold">{{ session.get('username') }}</span>
                 </a>
                 <a href="/inbox" class="btn btn-ghost btn-sm me-2">📥 Dead Drops</a>
-                <a href="/logout" class="btn btn-outline-danger border-0 btn-sm opacity-75">Disconnect</a>
+                <a href="/logout" class="btn btn-outline-danger border-0 btn-sm opacity-75" data-turbo="false">Disconnect</a>
             {% else %}
-                <a href="/" class="btn btn-ghost btn-sm me-2">Gateway</a>
-                <a href="/register" class="btn btn-glow btn-sm px-3">Join Grid</a>
+                <a href="/" class="btn btn-ghost btn-sm me-2" data-turbo="false">Gateway</a>
+                <a href="/register" class="btn btn-glow btn-sm px-3" data-turbo="false">Join Grid</a>
             {% endif %}
         </div>
     </div>
 </nav>
 
-<!-- FLASH MESSAGES (Handled globally) -->
 <div class="container" style="max-width: 800px;">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -83,14 +79,14 @@
 </div>
 
 <!-- ========================================== -->
-<!-- THIS IS THE MAGIC HOLE WHERE OTHER PAGES INJECT THEIR CODE -->
-{% block content %}
-{% endblock %}
+<!-- MAIN CONTENT HOLE FOR ALL PAGES -->
+{% block content %}{% endblock %}
 <!-- ========================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- (You can put your custom Javascript here if you want it to run everywhere) -->
+<!-- FUTURE-PROOFING: A slot for page-specific Javascript later -->
+{% block extra_js %}{% endblock %}
 
 </body>
 </html>
