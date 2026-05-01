@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Grid - AnyAuthor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- THE UNIVERSAL TURBO ENGINE (Only needs to be written here once!) -->
+    <script src="https://unpkg.com/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
+    
+    <style>
+        /* ALL YOUR CSS GOES HERE ONCE */
+        body {
+            background: radial-gradient(circle at center, #111827 0%, #000000 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding-bottom: 5rem;
+            min-height: 100vh;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in-element { animation: fadeInUp 0.6s ease-out forwards; }
+        .navbar-custom { background: rgba(5, 5, 5, 0.7) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: sticky; top: 0; z-index: 1000; }
+        .brand-logo { font-weight: 800; letter-spacing: -1px; background: linear-gradient(to right, #ffffff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .glass-card { background: rgba(20, 20, 20, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+        .glass-card:hover { border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 10px 40px rgba(168, 85, 247, 0.1); }
+        .custom-input { background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; border-radius: 10px; transition: all 0.3s; }
+        .custom-input:focus { background: rgba(255, 255, 255, 0.06) !important; border-color: #a855f7 !important; box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15) !important; }
+        .custom-input::placeholder { color: #6b7280 !important; }
+        .seamless-textarea { background: transparent !important; border: none !important; color: #ffffff !important; font-size: 1.2rem; resize: none; box-shadow: none !important; }
+        .seamless-textarea::placeholder { color: #4b5563 !important; font-weight: 300; }
+        .btn-glow { background: #ffffff; color: #000000; font-weight: 700; border: none; border-radius: 10px; padding: 10px 20px; transition: all 0.2s; }
+        .btn-glow:hover { background: #f3e8ff; box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); transform: translateY(-1px); }
+        .btn-ghost { background: rgba(255,255,255,0.03); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; transition: all 0.2s; }
+        .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: #a855f7; color: #ffffff; }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); }
+        .text-muted-custom { color: #9ca3af !important; }
+        .accent-purple { color: #a855f7 !important; }
+        .nav-pills .nav-link { color: #9ca3af; border-radius: 10px; margin: 0 5px; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+        .nav-pills .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
+        .nav-pills .nav-link.active { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+<!-- THE UNIVERSAL NAVBAR (Only written here once!) -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-5 py-3">
+    <div class="container">
+        <a class="navbar-brand brand-logo fs-3 me-4" href="/feed">AnyAuthor.</a>
+        <form action="/search" method="GET" class="d-flex flex-grow-1 me-4">
+            <input class="form-control form-control-sm me-2 custom-input" type="search" name="q" placeholder="Search the grid..." required>
+            <button class="btn btn-ghost btn-sm px-3" type="submit">Scan</button>
+        </form>
+        <div class="d-flex align-items-center">
+            {% if session.get('user_id') %}
+                <a href="/profile/{{ session.get('username') }}" class="text-light text-decoration-none me-4 d-flex align-items-center">
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('username') }}&background=random&color=fff&bold=true" class="user-avatar me-2 shadow-sm">
+                    <span class="fw-bold">{{ session.get('username') }}</span>
+                </a>
+                <a href="/inbox" class="btn btn-ghost btn-sm me-2">📥 Dead Drops</a>
+                <a href="/logout" class="btn btn-outline-danger border-0 btn-sm opacity-75">Disconnect</a>
+            {% else %}
+                <a href="/" class="btn btn-ghost btn-sm me-2">Gateway</a>
+                <a href="/register" class="btn btn-glow btn-sm px-3">Join Grid</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- FLASH MESSAGES (Handled globally) -->
+<div class="container" style="max-width: 800px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-dark border-{{ category }} text-white alert-dismissible fade show shadow-sm rounded-4" role="alert" style="background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);">
+            <strong class="text-{{ category }}">System:</strong> {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+</div>
+
+<!-- ========================================== -->
+<!-- THIS IS THE MAGIC HOLE WHERE OTHER PAGES INJECT THEIR CODE -->
+{% block content %}
+{% endblock %}
+<!-- ========================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- (You can put your custom Javascript here if you want it to run everywhere) -->
+
+</body>
+</html>
