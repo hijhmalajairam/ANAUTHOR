@@ -32,7 +32,7 @@ def post_anonymous():
     cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, expiration_time))
     author_id = cur.fetchone()[0]
     
-    # NEW: Tell the browser to remember this Ghost ID!
+    # Store Ghost ID
     ghosts = session.get('ghost_ids', [])
     ghosts.append(author_id)
     session['ghost_ids'] = ghosts
@@ -77,7 +77,7 @@ def post_dispatch():
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
-        # NEW: Tell the browser to remember this Ghost ID!
+        # Store Ghost ID
         ghosts = session.get('ghost_ids', [])
         ghosts.append(author_id)
         session['ghost_ids'] = ghosts
@@ -93,7 +93,6 @@ def post_dispatch():
     threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
-# --- Everything below here remains exactly the same ---
 @actions_bp.route('/dispatch/<int:dispatch_id>/comment', methods=['POST'])
 def post_comment(dispatch_id):
     content = request.form['comment_content']
