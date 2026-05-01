@@ -11,7 +11,8 @@ actions_bp = Blueprint('actions', __name__)
 
 @actions_bp.route('/post_anonymous', methods=['POST'])
 def post_anonymous():
-    title, post_content = request.form.get('title'), request.form['content']
+    title = request.form.get('title')
+    post_content = request.form['content']
     media_url = request.form.get('media_url')
     media_file = request.files.get('media_upload') if request.files else None
     
@@ -32,11 +33,12 @@ def post_anonymous():
     cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, expiration_time))
     author_id = cur.fetchone()[0]
     
-    # Store Ghost ID
+    # Store Ghost ID in session
     ghosts = session.get('ghost_ids', [])
     ghosts.append(author_id)
     session['ghost_ids'] = ghosts
     
+    # Insert as 'pending' immediately
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -45,13 +47,15 @@ def post_anonymous():
     cur.close()
     conn.close()
     
+    # Fire background AI checks
     threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
 @actions_bp.route('/post_dispatch', methods=['POST'])
 def post_dispatch():
     if 'user_id' not in session: return redirect(url_for('auth.login'))
-    title, post_content = request.form.get('title'), request.form['content']
+    title = request.form.get('title')
+    post_content = request.form['content']
     
     media_url = request.form.get('media_url')
     media_file = request.files.get('media_upload') if request.files else None
@@ -77,11 +81,12 @@ def post_dispatch():
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
-        # Store Ghost ID
+        # Store Ghost ID in session
         ghosts = session.get('ghost_ids', [])
         ghosts.append(author_id)
         session['ghost_ids'] = ghosts
 
+    # Insert as 'pending' immediately
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -90,6 +95,7 @@ def post_dispatch():
     cur.close()
     conn.close()
 
+    # Fire background AI checks
     threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
