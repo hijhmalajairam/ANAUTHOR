@@ -3,7 +3,6 @@ import os, random, string
 from datetime import timedelta, datetime
 from werkzeug.utils import secure_filename
 from db import get_db_connection
-# NOTE: We now ONLY import the background combo function, we don't run AI on the main thread anymore
 from helpers import get_ist_time, allowed_file, run_background_ai_checks, fact_check_content
 from security import limiter  
 import threading
@@ -33,7 +32,11 @@ def post_anonymous():
     cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, expiration_time))
     author_id = cur.fetchone()[0]
     
-    # INSTANT SPEED: Insert as 'pending', save immediately, no AI roadblock
+    # NEW: Tell the browser to remember this Ghost ID!
+    ghosts = session.get('ghost_ids', [])
+    ghosts.append(author_id)
+    session['ghost_ids'] = ghosts
+    
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -42,7 +45,6 @@ def post_anonymous():
     cur.close()
     conn.close()
     
-    # Fire the background AI worker
     threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
@@ -68,14 +70,18 @@ def post_dispatch():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    if post_type == 'named': author_id = session['user_id']
+    if post_type == 'named': 
+        author_id = session['user_id']
     else:
         ghost_expiry = expiration_time if expiration_time else (get_ist_time() + timedelta(hours=24))
         anon_username = f"Anon_{''.join(random.choices(string.digits, k=5))}"
         cur.execute('INSERT INTO Authors (username, password_hash, is_anonymous, expires_at) VALUES (%s, %s, %s, %s) RETURNING id', (anon_username, 'no_password_needed', True, ghost_expiry))
         author_id = cur.fetchone()[0]
+        # NEW: Tell the browser to remember this Ghost ID!
+        ghosts = session.get('ghost_ids', [])
+        ghosts.append(author_id)
+        session['ghost_ids'] = ghosts
 
-    # INSTANT SPEED: Insert as 'pending', save immediately, no AI roadblock
     cur.execute('INSERT INTO Dispatches (author_id, title, content, media_url, expires_at, fact_check_result, is_debunked, visibility) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id', 
                 (author_id, title, post_content, media_url, expiration_time, "[AI Sentinel: Fact Check Pending...]", False, 'pending'))
     dispatch_id = cur.fetchone()[0]
@@ -84,10 +90,10 @@ def post_dispatch():
     cur.close()
     conn.close()
 
-    # Fire the background AI worker
     threading.Thread(target=run_background_ai_checks, args=(dispatch_id, post_content, author_id)).start()
     return redirect(url_for('pages.index'))
 
+# --- Everything below here remains exactly the same ---
 @actions_bp.route('/dispatch/<int:dispatch_id>/comment', methods=['POST'])
 def post_comment(dispatch_id):
     content = request.form['comment_content']
@@ -124,10 +130,7 @@ def send_message():
     receiver_username = request.form['receiver_username']
     content = request.form['content']
     deliver_at = datetime.fromisoformat(request.form.get('deliver_at')) if request.form.get('deliver_at') else get_ist_time()
-    
-    expires_at = None
-    if request.form.get('expires_at'):
-        expires_at = datetime.fromisoformat(request.form.get('expires_at'))
+    expires_at = datetime.fromisoformat(request.form.get('expires_at')) if request.form.get('expires_at') else None
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -148,14 +151,12 @@ def send_message():
         except Exception:
             conn.rollback()
             cur.execute('INSERT INTO Messages (sender_id, receiver_id, content, deliver_at) VALUES (%s, %s, %s, %s)', (sender_id, receiver[0], content, deliver_at))
-            
         conn.commit()
         flash(f"Secure payload delivered to {receiver_username}.", "success")
     else:
         flash("Agent not found. Dead drop failed.", "danger")
         
     cur.close(); conn.close()
-    
     referrer = request.referrer
     if referrer: return redirect(referrer)
     return redirect(url_for('pages.index'))
@@ -205,13 +206,10 @@ def trigger_fact_check(dispatch_id):
 @actions_bp.route('/edit_profile', methods=['POST'])
 def edit_profile():
     if 'user_id' not in session: return redirect(url_for('auth.login'))
-    
     bio = request.form.get('bio')
     profile_pic = request.files.get('profile_pic')
-    
     conn = get_db_connection()
     cur = conn.cursor()
-    
     if profile_pic and allowed_file(profile_pic.filename):
         filename = secure_filename(f"avatar_{session['user_id']}_{profile_pic.filename}")
         save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
@@ -220,7 +218,6 @@ def edit_profile():
         cur.execute("UPDATE Authors SET bio = %s, profile_pic = %s WHERE id = %s", (bio, pic_url, session['user_id']))
     else:
         cur.execute("UPDATE Authors SET bio = %s WHERE id = %s", (bio, session['user_id']))
-        
     conn.commit()
     cur.close(); conn.close()
     return redirect(url_for('pages.profile', username=session['username']))
