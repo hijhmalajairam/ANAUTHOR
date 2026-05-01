@@ -15,7 +15,7 @@ def index():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Clean up expired ghosts and messages
+    # 1. Clean up expired ghosts and messages
     cur.execute("DELETE FROM Dispatches WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'")
     cur.execute("DELETE FROM Messages WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'") 
     cur.execute("""
@@ -28,7 +28,7 @@ def index():
     
     feed_type = request.args.get('feed', 'global')
     
-    # PRIVACY RADAR
+    # 2. PRIVACY RADAR: Update activity and count users
     if 'user_id' in session:
         cur.execute("UPDATE Authors SET last_active = CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata' WHERE id = %s", (session['user_id'],))
         conn.commit()
@@ -39,17 +39,18 @@ def index():
     cur.execute("SELECT COUNT(*) FROM Authors WHERE is_anonymous = True")
     live_ghosts = cur.fetchone()['count']
 
-    # GHOST MEMORY: Collect all IDs owned by this browser
+    # --- GHOST MEMORY: Collect all IDs owned by this browser ---
     owned_ids = session.get('ghost_ids', [])
     if 'user_id' in session:
         owned_ids.append(session['user_id'])
     
+    # Dummy ID to prevent SQL syntax errors if the list is empty
     if not owned_ids:
-        owned_ids = [-1] # Dummy ID so SQL doesn't crash
+        owned_ids = [-1]
         
     owned_ids_tuple = tuple(owned_ids)
 
-    # Load Feed
+    # Load Feed Data
     if 'user_id' in session and feed_type == 'following':
         cur.execute('''SELECT d.id, d.title, d.content, d.media_url, d.created_at, a.username, a.is_anonymous, d.visibility 
                        FROM Dispatches d JOIN Authors a ON d.author_id = a.id JOIN Follows f ON a.id = f.followed_id 
